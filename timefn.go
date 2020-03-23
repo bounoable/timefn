@@ -69,5 +69,15 @@ func Between(t, l, r time.Time) bool {
 
 // BetweenInclusive determines if t is between l and r (inclusive).
 func BetweenInclusive(t, l, r time.Time) bool {
-	return Between(t, l, r) || t == l || t == r
+	return SameOrAfter(t, l) && SameOrBefore(t, r)
+}
+
+// SameOrAfter determines if t is the same as or after l.
+func SameOrAfter(t, l time.Time) bool {
+	return t.Equal(l) || t.After(l)
+}
+
+// SameOrBefore determines if t is the same as or before r.
+func SameOrBefore(t, r time.Time) bool {
+	return t.Equal(r) || t.Before(r)
 }
