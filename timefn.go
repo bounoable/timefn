@@ -27,7 +27,7 @@ func StartOfHour(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, t.Location())
 }
 
-// EndOfHour returns the end of the Hour.
+// EndOfHour returns the end of the hour.
 func EndOfHour(t time.Time) time.Time {
 	return StartOfHour(t).Add(time.Hour).Add(-time.Nanosecond)
 }
@@ -40,6 +40,26 @@ func StartOfDay(t time.Time) time.Time {
 // EndOfDay returns the end of the day.
 func EndOfDay(t time.Time) time.Time {
 	return StartOfDay(t).AddDate(0, 0, 1).Add(-time.Nanosecond)
+}
+
+// StartOfWeek returns the start (sunday) of the week.
+func StartOfWeek(t time.Time) time.Time {
+	return StartOfDay(t.AddDate(0, 0, -int(t.Weekday())))
+}
+
+// EndOfWeek returns the end (saturday) of the week.
+func EndOfWeek(t time.Time) time.Time {
+	return EndOfDay(t.AddDate(0, 0, 6-int(t.Weekday())))
+}
+
+// StartOfISOWeek returns the ISO start (monday) of the week.
+func StartOfISOWeek(t time.Time) time.Time {
+	return StartOfDay(t.AddDate(0, 0, -int((t.Weekday()+6)%7)))
+}
+
+// EndOfISOWeek returns the ISO end (sunday) of the week.
+func EndOfISOWeek(t time.Time) time.Time {
+	return EndOfDay(t.AddDate(0, 0, 6-int((t.Weekday()+6)%7)))
 }
 
 // StartOfMonth returns the start of the month.
@@ -69,15 +89,15 @@ func Between(t, l, r time.Time) bool {
 
 // BetweenInclusive determines if t is between l and r (inclusive).
 func BetweenInclusive(t, l, r time.Time) bool {
-	return SameOrAfter(t, l) && SameOrBefore(t, r)
-}
-
-// SameOrAfter determines if t is the same as or after l.
-func SameOrAfter(t, l time.Time) bool {
-	return t.Equal(l) || t.After(l)
+	return SameOrBefore(t, r) && SameOrAfter(t, l)
 }
 
 // SameOrBefore determines if t is the same as or before r.
 func SameOrBefore(t, r time.Time) bool {
 	return t.Equal(r) || t.Before(r)
+}
+
+// SameOrAfter determines if t is the same as or after l.
+func SameOrAfter(t, l time.Time) bool {
+	return t.Equal(l) || t.After(l)
 }
