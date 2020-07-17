@@ -101,3 +101,8 @@ func SameOrBefore(t, r time.Time) bool {
 func SameOrAfter(t, l time.Time) bool {
 	return t.Equal(l) || t.After(l)
 }
+
+// AtTime returns t with its time set to h hours, m minutes, s seconds and ns nanoseconds.
+func AtTime(t time.Time, h, m, s, ns int) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), h, m, s, ns, t.Location())
+}

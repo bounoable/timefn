@@ -1,6 +1,7 @@
 package timefn_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -293,5 +294,34 @@ func TestSameOrAfter(t *testing.T) {
 
 	for _, test := range tests {
 		assert.Equal(t, test.Expected, timefn.SameOrAfter(test.Time, test.Left))
+	}
+}
+
+func TestAtTime(t *testing.T) {
+	tests := []struct {
+		t           time.Time
+		h, m, s, ns int
+		expected    time.Time
+	}{
+		{
+			t: time.Date(2020, time.January, 1, 13, 23, 18, 8, time.UTC),
+			h: 15, m: 7, s: 50, ns: 173,
+			expected: time.Date(2020, time.January, 1, 15, 7, 50, 173, time.UTC),
+		},
+		{
+			t: time.Date(2020, time.February, 5, 10, 5, 30, 0, time.UTC),
+			h: 4, m: 2, s: 9, ns: 37,
+			expected: time.Date(2020, time.February, 5, 4, 2, 9, 37, time.UTC),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(fmt.Sprintf(
+			"%s + %dh%dm%ds%dns",
+			test.t.String(),
+			test.h, test.m, test.s, test.ns,
+		), func(t *testing.T) {
+			assert.Equal(t, test.expected, timefn.AtTime(test.t, test.h, test.m, test.s, test.ns))
+		})
 	}
 }
