@@ -340,18 +340,21 @@ func (p Period) cut(cut Period) ([]Period, bool) {
 
 // CutInclusive is the same as Cut, but treats the periods as closed intervals,
 // meaning that the start and end of the period are both included.
-func (p Period) CutInclusive(cut Period) ([]Period, bool) {
+func (p Period) CutInclusive(cut ...Period) []Period {
 	periodEndZero := p.End.IsZero()
 
 	if !periodEndZero {
 		p.End = p.End.Add(time.Nanosecond)
 	}
 
-	if !cut.End.IsZero() {
-		cut.End = cut.End.Add(time.Nanosecond)
-	}
+	cut = slice.Map(cut, func(p Period) Period {
+		if !p.End.IsZero() {
+			p.End = p.End.Add(time.Nanosecond)
+		}
+		return p
+	})
 
-	result, ok := p.cut(cut)
+	result := p.Cut(cut...)
 
 	if !periodEndZero {
 		result = slice.Map(result, func(p Period) Period {
@@ -360,7 +363,7 @@ func (p Period) CutInclusive(cut Period) ([]Period, bool) {
 		})
 	}
 
-	return result, ok
+	return result
 }
 
 func absoluteStep(step time.Duration) time.Duration {
