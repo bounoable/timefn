@@ -340,13 +340,7 @@ func TestPeriod_Cut(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotCut := tt.period.Cut(tt.cut)
-
-			if tt.wantCut && !gotCut {
-				t.Errorf("wanted period to be cut, but it wasn't")
-			} else if !tt.wantCut && gotCut {
-				t.Errorf("wanted period not to be cut, but it was")
-			}
+			got := tt.period.Cut(tt.cut)
 
 			if !slices.Equal(got, tt.want) {
 				t.Errorf("got %v, want %v", got, tt.want)

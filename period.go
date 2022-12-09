@@ -252,11 +252,11 @@ func (p Period) SliceDatesStep(step time.Duration, fn func(date time.Time, i int
 	return
 }
 
-// Cut cuts the provided period out of `p`. The returned boolean indicates
-// whether the period was cut or returned as is.
+// Cut cuts periods out of `p`. The returned boolean indicates whether the
+// period was cut or returned as is.
 //
 // Cut treats the periods as closed-open intervals, meaning that the start of
-// the period is inclusive but the end is not.
+// a period is inclusive but the end is not.
 //
 // # Example
 //
@@ -280,7 +280,31 @@ func (p Period) SliceDatesStep(step time.Duration, fn func(date time.Time, i int
 //	//		End: time.Date(2020, 1, 7, 0, 0, 0, 0, time.UTC),
 //	//	},
 //	}
-func (p Period) Cut(cut Period) ([]Period, bool) {
+func (p Period) Cut(cut ...Period) []Period {
+	slices.SortFunc(cut, func(a, b Period) bool {
+		return a.Start.Before(b.Start)
+	})
+
+	remaining := []Period{p}
+
+	for _, c := range cut {
+		newRemaining := make([]Period, 0, len(remaining))
+
+		for _, r := range remaining {
+			if cutted, ok := r.cut(c); ok {
+				newRemaining = append(newRemaining, cutted...)
+				continue
+			}
+			newRemaining = append(newRemaining, r)
+		}
+
+		remaining = newRemaining
+	}
+
+	return remaining
+}
+
+func (p Period) cut(cut Period) ([]Period, bool) {
 	cutStartZero := cut.Start.IsZero()
 	cutEndZero := cut.End.IsZero()
 
@@ -330,7 +354,7 @@ func (p Period) CutInclusive(cut Period) ([]Period, bool) {
 		cut.End = cut.End.Add(time.Nanosecond)
 	}
 
-	result, ok := p.Cut(cut)
+	result, ok := p.cut(cut)
 
 	if !periodEndZero {
 		result = slice.Map(result, func(p Period) Period {
