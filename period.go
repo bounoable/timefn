@@ -83,6 +83,14 @@ func (p Period) Validate() error {
 	return nil
 }
 
+// Add returns a new period with the start and end time of p shifted by d.
+func (p Period) Add(d time.Duration) Period {
+	return Period{
+		Start: p.Start.Add(d),
+		End:   p.End.Add(d),
+	}
+}
+
 // OverlapsWith returns whether p and p2 overlap.
 func (p Period) OverlapsWith(p2 Period) bool {
 	return p.OverlapsWithStep(time.Nanosecond, p2)
