@@ -284,6 +284,14 @@ func (p Period) Cut(cut Period) ([]Period, bool) {
 	cutStartZero := cut.Start.IsZero()
 	cutEndZero := cut.End.IsZero()
 
+	if !cutStartZero && SameOrBefore(cut.Start, p.Start) && SameOrAfter(cut.End, p.End) {
+		return nil, true
+	}
+
+	if !cutEndZero && SameOrAfter(cut.End, p.End) && SameOrBefore(cut.Start, p.Start) {
+		return nil, true
+	}
+
 	if (!cutStartZero && p.End.Before(cut.Start)) || (!cutEndZero && p.Start.After(cut.End)) {
 		return []Period{p}, false
 	}

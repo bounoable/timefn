@@ -138,7 +138,7 @@ func TestPeriod_OverlapsWithStep(t *testing.T) {
 	}
 }
 
-func TestPeriod_Cut(t *testing.T) {
+func TestPeriod_CutInclusive(t *testing.T) {
 	jan1 := time.Date(2023, time.January, 1, 0, 0, 0, 0, time.UTC)
 	jan2 := time.Date(2023, time.January, 2, 0, 0, 0, 0, time.UTC)
 	jan2End := timefn.EndOfDay(jan2)
@@ -218,6 +218,19 @@ func TestPeriod_Cut(t *testing.T) {
 			},
 			wantCut: true,
 		},
+		{
+			name: "exact cut",
+			period: timefn.Period{
+				Start: jan1,
+				End:   jan7End,
+			},
+			cut: timefn.Period{
+				Start: jan1,
+				End:   jan7End,
+			},
+			want:    nil,
+			wantCut: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -237,7 +250,7 @@ func TestPeriod_Cut(t *testing.T) {
 	}
 }
 
-func TestPeriod_CutInclusive(t *testing.T) {
+func TestPeriod_Cut(t *testing.T) {
 	jan1 := time.Date(2023, time.January, 1, 0, 0, 0, 0, time.UTC)
 	jan3 := time.Date(2023, time.January, 3, 0, 0, 0, 0, time.UTC)
 	jan4 := time.Date(2023, time.January, 4, 0, 0, 0, 0, time.UTC)
@@ -308,6 +321,19 @@ func TestPeriod_CutInclusive(t *testing.T) {
 					End:   jan7,
 				},
 			},
+			wantCut: true,
+		},
+		{
+			name: "exact cut",
+			period: timefn.Period{
+				Start: jan1,
+				End:   jan7,
+			},
+			cut: timefn.Period{
+				Start: jan1,
+				End:   jan7,
+			},
+			want:    nil,
 			wantCut: true,
 		},
 	}
