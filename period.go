@@ -252,11 +252,8 @@ func (p Period) SliceDatesStep(step time.Duration, fn func(date time.Time, i int
 	return
 }
 
-// Cut cuts periods out of `p`. The returned boolean indicates whether the
-// period was cut or returned as is.
-//
-// Cut treats the periods as closed-open intervals, meaning that the start of
-// a period is inclusive but the end is not.
+// Cut cuts periods out of `p`. Cut treats the periods as closed-open intervals,
+// meaning that the start of a period is inclusive but the end is not.
 //
 // # Example
 //
