@@ -278,8 +278,14 @@ func (p Period) SliceDatesStep(step time.Duration, fn func(date time.Time, i int
 //	//	},
 //	}
 func (p Period) Cut(cut ...Period) []Period {
-	slices.SortFunc(cut, func(a, b Period) bool {
-		return a.Start.Before(b.Start)
+	slices.SortFunc(cut, func(a, b Period) int {
+		if a.Start.Before(b.Start) {
+			return -1
+		}
+		if a.Start.After(b.Start) {
+			return 1
+		}
+		return 0
 	})
 
 	remaining := []Period{p}
