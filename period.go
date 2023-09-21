@@ -196,7 +196,7 @@ func (p Period) DatesStep(step time.Duration) []time.Time {
 
 	for {
 		out = append(out, current)
-		current = StartOfDay(current.Add(24 * time.Hour))
+		current = StartOfDay(current.AddDate(0, 0, 1))
 		if current.After(end) {
 			break
 		}
