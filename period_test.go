@@ -1,11 +1,11 @@
 package timefn_test
 
 import (
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/bounoable/timefn"
-	"golang.org/x/exp/slices"
 )
 
 func TestPeriod_OverlapsWithStep(t *testing.T) {
