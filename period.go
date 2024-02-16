@@ -415,6 +415,29 @@ func (p Period) CutInclusive(cut ...Period) []Period {
 	return result
 }
 
+// MergePeriods consolidates a slice of [Period]s by combining those that
+// overlap or are adjacent into single, continuous periods. It returns a new
+// slice of merged [Period]s, with the start times sorted in ascending order.
+// Adjacency is determined without any minimum duration step, meaning that
+// periods touching at their boundaries are considered overlapping.
+func MergePeriods(periods []Period) []Period {
+	return MergePeriodsStep(0, periods)
+}
+
+// MergePeriodsStep merges a slice of [Period]s into a continuous sequence where
+// overlapping periods are combined based on a specified minimum duration step.
+// It ensures that any periods that overlap by at least the given step duration
+// are joined into single periods, producing a consolidated timeline. The result
+// is a slice of non-overlapping [Period]s sorted by their start times. If the
+// step duration is zero, adjacent periods will be merged even if they only
+// touch at the end and start times.
+func MergePeriodsStep(step time.Duration, periods []Period) []Period {
+	if len(periods) < 2 {
+		return periods
+	}
+	return periods[0].MergeStep(step, periods[1:])
+}
+
 // MergeStep merges the [Period] with a slice of other periods, ensuring that
 // any overlapping periods are combined into continuous periods based on a
 // specified minimum duration step. It returns a slice of merged periods, sorted
