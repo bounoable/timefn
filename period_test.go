@@ -1,6 +1,7 @@
 package timefn_test
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -455,5 +456,121 @@ func TestPeriod_DatesStep(t *testing.T) {
 		if !slices.Equal(dates, tt.want) {
 			t.Errorf("expected dates of period to be %v; got %v", tt.want, dates)
 		}
+	}
+}
+
+func TestPeriod_MergeStep(t *testing.T) {
+	jan1 := time.Date(2023, time.January, 1, 0, 0, 0, 0, time.UTC)
+	jan4 := time.Date(2023, time.January, 4, 0, 0, 0, 0, time.UTC)
+	jan5 := time.Date(2023, time.January, 5, 0, 0, 0, 0, time.UTC)
+	jan7 := time.Date(2023, time.January, 7, 0, 0, 0, 0, time.UTC)
+	jan8 := time.Date(2023, time.January, 8, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name    string
+		period  timefn.Period
+		periods []timefn.Period
+		step    time.Duration
+		want    []timefn.Period
+	}{
+		{
+			name:   "adjacent periods merged with zero step",
+			period: timefn.Period{Start: jan1, End: jan4},
+			periods: []timefn.Period{
+				{Start: jan4, End: jan5},
+			},
+			step: 0, // Zero step should consider adjacent periods as overlapping
+			want: []timefn.Period{{Start: jan1, End: jan5}},
+		},
+		{
+			name:   "adjacent periods not merged with non-zero step",
+			period: timefn.Period{Start: jan1, End: jan4},
+			periods: []timefn.Period{
+				{Start: jan4, End: jan7},
+			},
+			step: time.Nanosecond, // Non-zero step should consider adjacent periods as not overlapping
+			want: []timefn.Period{
+				{Start: jan1, End: jan4},
+				{Start: jan4, End: jan7},
+			},
+		},
+		{
+			name:   "no merge with a gap",
+			period: timefn.Period{Start: jan1, End: jan4},
+			periods: []timefn.Period{
+				{Start: jan4.Add(time.Nanosecond), End: jan8},
+			},
+			step: 0,
+			want: []timefn.Period{
+				{Start: jan1, End: jan4},
+				{Start: jan4.Add(time.Nanosecond), End: jan8},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.period.MergeStep(tt.step, tt.periods)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s = %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPeriod_Merge(t *testing.T) {
+	jan1 := time.Date(2023, time.January, 1, 0, 0, 0, 0, time.UTC)
+	jan3 := time.Date(2023, time.January, 3, 0, 0, 0, 0, time.UTC)
+	jan4 := time.Date(2023, time.January, 4, 0, 0, 0, 0, time.UTC)
+	jan6 := time.Date(2023, time.January, 6, 0, 0, 0, 0, time.UTC)
+	jan7 := time.Date(2023, time.January, 7, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name    string
+		period  timefn.Period
+		periods []timefn.Period
+		want    []timefn.Period
+	}{
+		{
+			name:   "merge adjacent periods",
+			period: timefn.Period{Start: jan1, End: jan3},
+			periods: []timefn.Period{
+				{Start: jan3, End: jan4},
+				{Start: jan4, End: jan6},
+			},
+			want: []timefn.Period{{Start: jan1, End: jan6}},
+		},
+		{
+			name:   "merge overlapping periods",
+			period: timefn.Period{Start: jan1, End: jan4},
+			periods: []timefn.Period{
+				{Start: jan3, End: jan7},
+			},
+			want: []timefn.Period{{Start: jan1, End: jan7}},
+		},
+		{
+			name:    "no merge needed",
+			period:  timefn.Period{Start: jan1, End: jan3},
+			periods: []timefn.Period{{Start: jan4, End: jan6}},
+			want:    []timefn.Period{{Start: jan1, End: jan3}, {Start: jan4, End: jan6}},
+		},
+		{
+			name:   "merge with period starting at the same time",
+			period: timefn.Period{Start: jan1, End: jan3},
+			periods: []timefn.Period{
+				{Start: jan1, End: jan4},
+			},
+			want: []timefn.Period{{Start: jan1, End: jan4}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			period := tt.period
+			got := period.Merge(tt.periods)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("TestPeriod_Merge() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

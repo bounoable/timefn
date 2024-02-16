@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"sort"
 	"strings"
 	"text/template"
 	"time"
@@ -174,7 +175,7 @@ func (p Period) Years() []int {
 //
 //	"2020-12-31 00:00:00 -> 2021-01-01 00:00:00"
 //
-// A step of 1 nanosecond would consider the following period to only be in the year 2020:
+// A step of 1 nanosecond would consider the following period to be only in the year 2020:
 //
 //	"2020-12-31 00:00:00 -> 2021-01-01 00:00:00"
 func (p Period) YearsStep(step time.Duration) []int {
@@ -215,22 +216,20 @@ func (p Period) InYearStep(step time.Duration, year int) bool {
 	return slices.Contains(p.YearsStep(step), year)
 }
 
-// Dates returns a slice of all dates within the period, from the start date to
-// the end date. Each element in the returned slice represents a single day
-// within the period. The start and end times of the period are included in this
-// range. If the period is not valid, it returns nil.
+// Dates retrieves all the dates within the period, returning a slice of
+// [time.Time]. Each date is represented by the start of the day, and they are
+// returned in chronological order from the start to the end of the period. If
+// the period is invalid, it returns nil.
 func (p Period) Dates() []time.Time {
 	return p.DatesStep(time.Nanosecond)
 }
 
-// DatesStep returns a slice of dates within the defined time period. The step
-// duration argument defines the minimum duration that must pass within a day
-// for that day to be considered part of the period. For instance, if step is 1
-// hour, at least 1 hour must pass within a day for that day to be included in
-// the period. The function validates the period before attempting to generate
-// the dates. If the validation fails, it returns nil. Otherwise, it generates
-// and returns an array of time.Time values representing each date in the period
-// at which the specified step duration passes.
+// DatesStep iterates over each date within the period, using a specified step
+// interval. It generates a slice of [time.Time] representing each date from the
+// start to the end of the period, not including the last date if it is equal to
+// the end date minus the step interval. The step defines the minimum duration
+// to advance when moving to the next date within the period. If any part of the
+// period is invalid, it returns nil.
 func (p Period) DatesStep(step time.Duration) []time.Time {
 	if err := p.Validate(); err != nil {
 		return nil
@@ -252,26 +251,26 @@ func (p Period) DatesStep(step time.Duration) []time.Time {
 	return out
 }
 
-// SliceDates divides the period into two at the first date for which the
-// provided function returns true. The function is applied to each date within
-// the period, in chronological order. If such a date is found, it returns two
-// new periods: one before and one after that date, and a boolean value
-// indicating that a split was made. If no such date is found, it returns the
-// original period, an empty period, and false.
+// SliceDates divides the [Period] into two periods based on a user-defined
+// criterion. It iterates over each date within the period, invoking a callback
+// function with the current date and its index. The callback's return value
+// determines where the slicing occurs; if it returns true, slicing is performed
+// at that date. The function returns two [Period]s representing the time spans
+// before and after the slicing point, and a boolean indicating whether the
+// slicing was successful. If no date satisfies the criterion, or if the
+// [Period] is invalid, the original [Period] is returned as the first result,
+// with an empty second [Period] and false for the boolean.
 func (p Period) SliceDates(fn func(date time.Time, i int) bool) (Period, Period, bool) {
 	return p.SliceDatesStep(time.Nanosecond, fn)
 }
 
-// SliceDatesStep takes a step duration and a function as arguments. It attempts
-// to divide the period into two at the first date where the provided function
-// returns true. The function is run on each date in the period, starting from
-// the start date, with each date and its index as arguments. If such a date is
-// found, it splits the period into two at that date, returning these two
-// periods and a boolean value of true. If not, it returns the original period,
-// an empty period, and false. The step argument defines the minimum duration
-// that must pass within a day for that day to be considered part of the period.
-// For instance, if step is 1 hour, at least 1 hour must pass within a day for
-// that day to be included in the period.
+// SliceDatesStep divides the [Period] into two at a date determined by the
+// provided callback function, which is called for each date in the period, with
+// an additional step interval between dates. It returns two [Period]s: one
+// before and one after the date where the callback returns true, along with a
+// boolean indicating if such a date was found. If the period is invalid or no
+// date satisfies the callback, it returns the original [Period], an empty
+// [Period], and false.
 func (p Period) SliceDatesStep(step time.Duration, fn func(date time.Time, i int) bool) (before Period, after Period, found bool) {
 	if err := p.Validate(); err != nil {
 		return p, Period{}, false
@@ -307,14 +306,14 @@ func (p Period) SliceDatesStep(step time.Duration, fn func(date time.Time, i int
 	return
 }
 
-// Cut takes a list of periods and removes them from the original period,
-// returning the remaining periods. If a period in the list overlaps with the
-// original period, it will be subtracted from it, potentially splitting the
-// original period into two or more smaller periods. If a period in the list
-// does not overlap with the original period, it is ignored. The function
-// handles multiple overlapping periods and adjusts the original period
-// accordingly. Before performing these operations, it sorts the periods in
-// ascending order based on their start times to ensure a consistent result.
+// Cut removes specified periods from the receiver [Period] and returns a slice
+// of the remaining [Period]s. This operation is non-destructive to the original
+// [Period]. If no periods are specified for removal or if none of the specified
+// periods intersect with the receiver, the result will contain the original
+// [Period] unaltered. If an intersection occurs, the function returns a new set
+// of [Period]s that represent the time spans before and after each
+// intersection, effectively "cutting out" the intersecting ranges. The
+// resulting slice is sorted by the start times of each [Period].
 func (p Period) Cut(cut ...Period) []Period {
 	slices.SortFunc(cut, func(a, b Period) int {
 		if a.Start.Before(b.Start) {
@@ -382,12 +381,14 @@ func (p Period) cut(cut Period) ([]Period, bool) {
 	return []Period{p}, false
 }
 
-// CutInclusive removes the given periods from the original [Period] and returns
-// the remaining periods. In contrast to the Cut function, this function
-// considers periods that either start at the end time or end at the start time
-// of the original period as overlapping. These overlapping periods are then
-// removed from the original period. The function ensures that the end times of
-// the resulting periods are exclusive by subtracting a nanosecond.
+// CutInclusive trims the specified periods from the receiver [Period] and
+// returns a slice of [Period]s that represent the remaining time ranges. It
+// does so in an inclusive manner, where the end times of both the receiver and
+// the specified periods are considered part of the cut. If a specified period
+// to cut overlaps with or is within the bounds of the receiver period, it is
+// trimmed accordingly, and the remaining non-overlapping parts are returned. If
+// no overlap exists, the original [Period] is returned unchanged. The resulting
+// slice of [Period]s is sorted by their start times.
 func (p Period) CutInclusive(cut ...Period) []Period {
 	periodEndZero := p.End.IsZero()
 
@@ -412,6 +413,54 @@ func (p Period) CutInclusive(cut ...Period) []Period {
 	}
 
 	return result
+}
+
+// MergeStep merges the [Period] with a slice of other periods, ensuring that
+// any overlapping periods are combined into continuous periods based on a
+// specified minimum duration step. It returns a slice of merged periods, sorted
+// by their start times. If no additional periods are provided, the result is a
+// slice containing only the original period. The step parameter determines how
+// much overlap is necessary for two periods to be considered as one continuous
+// period.
+func (p Period) MergeStep(step time.Duration, periods []Period) []Period {
+	if len(periods) == 0 {
+		return []Period{p}
+	}
+
+	periods = append([]Period{p}, periods...)
+
+	sort.Slice(periods, func(i, j int) bool {
+		return periods[i].Start.Before(periods[j].Start)
+	})
+
+	merged := []Period{periods[0]}
+
+	for _, p := range periods[1:] {
+		last := &merged[len(merged)-1]
+
+		if last.OverlapsWithStep(step, p) {
+			last.End = maxTime(last.End, p.End)
+		} else if SameOrBefore(last.End, p.Start) {
+			merged = append(merged, p)
+		}
+	}
+
+	return merged
+}
+
+func maxTime(a, b time.Time) time.Time {
+	if a.After(b) {
+		return a
+	}
+	return b
+}
+
+// Merge combines the receiver [Period] with a slice of other [Period]s and
+// returns a new slice of merged [Period]s. Overlapping periods are consolidated
+// into single periods, while non-overlapping periods remain separate. The merge
+// process respects the chronological order of periods.
+func (p Period) Merge(periods []Period) []Period {
+	return p.MergeStep(0, periods)
 }
 
 func absoluteStep(step time.Duration) time.Duration {
